@@ -27,10 +27,10 @@ public class TokenUtility {
                     .decode(keyConfig.getJwtAccessSecretKey()));
 
             return Jwts.parser()
-                    .setSigningKey(secretKey)
+                    .verifyWith(secretKey)
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseSignedClaims(token)
+                    .getPayload();
         }
         catch (Exception e){
             throw new ServiceException(INVALID_TOKEN);
