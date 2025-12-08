@@ -26,7 +26,8 @@ public class RecommendationController {
                                                                                     @RequestParam(name = "correlationId", required = false, defaultValue = "") String correlationId) {
 
         var baseParam = new BaseParam(version, correlationId);
-        recommendationService.getCBFRecommendations(limit, baseParam);
-        return null;
+        var response = recommendationService.getCBFRecommendations(limit, baseParam);
+
+        return ResponseEntity.ok(response);
     }
 }

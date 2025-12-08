@@ -1,6 +1,7 @@
 package com.merufureku.aromatica.recommendation_service.services.impl;
 
 import com.merufureku.aromatica.recommendation_service.dto.params.BaseParam;
+import com.merufureku.aromatica.recommendation_service.dto.params.ExcludeFragranceBatchNotesParam;
 import com.merufureku.aromatica.recommendation_service.dto.params.FragranceBatchNotesParam;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse;
@@ -11,9 +12,12 @@ import com.merufureku.aromatica.recommendation_service.services.interfaces.IFrag
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IRecommendationService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,22 +48,31 @@ public class RecommendationServiceImpl implements IRecommendationService {
         logger.info("Fragrance IDs for CBF: {}", userCollectionIds);
 
         var userCollectionNotes = fragranceService.getPerfumeNotes(new FragranceBatchNotesParam(userCollectionIds), 1, "correlationId");
-        var allFragranceNotes = fragranceService.getPerfumeNotes(1, "correlationId");
+        var allFragranceNotes = fragranceService.getPerfumeNotes(new ExcludeFragranceBatchNotesParam(userCollectionIds), 1, "correlationId");
 
         logger.info("CBF Recommendation result: {}", userCollectionNotes);
 
         var userFragranceVector = recommendationHelper.getCollectionVector(userCollectionNotes.data().fragranceNoteLists());
         var allFragranceVector = recommendationHelper.getAllPerfumesVector(allFragranceNotes.data());
 
-        var result = recommendationHelper.calculateCBFRecommendations(
+        var cbfResult = recommendationHelper.calculateCBFRecommendations(
                 userFragranceVector,
                 allFragranceVector,
                 limit
         );
 
-        logger.info("CBF Recommendation final result: {}", result);
+        var recommendations = new ArrayList<CBFResponse.Recommendations>();
 
-        return null;
+        for (Map.Entry<Long, Float> noteEntry : cbfResult.entrySet()) {
+
+            var recommendedFragrance = fragranceService.getPerfumeById(noteEntry.getKey(), 1, "correlationId").data();
+
+            recommendations.add(new CBFResponse.Recommendations(recommendedFragrance.id(), recommendedFragrance.name(),
+                    recommendedFragrance.brand(), recommendedFragrance.description(), noteEntry.getValue()));
+        }
+
+        return new BaseResponse<>(HttpStatus.OK.value(),
+                "Get Recommended Perfume Success", new CBFResponse(recommendations));
     }
 
 }

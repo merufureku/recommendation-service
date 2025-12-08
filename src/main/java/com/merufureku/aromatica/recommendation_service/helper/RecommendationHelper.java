@@ -2,11 +2,10 @@ package com.merufureku.aromatica.recommendation_service.helper;
 
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.NoteResponse;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,8 +13,6 @@ import static com.merufureku.aromatica.recommendation_service.constants.Recommen
 
 @Component
 public class RecommendationHelper {
-
-    private final Logger logger = LogManager.getLogger(this.getClass());
 
     public Map<Long, Float> getCollectionVector(List<FragranceNoteListResponse.FragranceNoteList> fragranceNoteLists) {
 
@@ -57,32 +54,36 @@ public class RecommendationHelper {
 
         for (Map.Entry<Long, Map<Long, Float>> perfumeEntry : allPerfumesVector.entrySet()) {
             Long perfumeId = perfumeEntry.getKey();
-            Map<Long, Float> perfumeVector = perfumeEntry.getValue();
-
-            logger.info("Calculating similarity for perfume ID: {}, {}", perfumeId, perfumeVector);
-
-            float similarityScore = 0.0f;
-
-            for (Map.Entry<Long, Float> noteEntry : userCollectionVector.entrySet()) {
-                Long collectionNoteId = noteEntry.getKey();
-                Float collectionNoteWeight = noteEntry.getValue();
-
-                Float perfumeNoteWeight = perfumeVector.getOrDefault(collectionNoteId, 0.0f);
-                similarityScore += collectionNoteWeight * perfumeNoteWeight;
-            }
+            float similarityScore = getSimilarityScore(userCollectionVector, perfumeEntry);
 
             similarityScores.put(perfumeId, similarityScore);
         }
 
-        logger.info("Calculated similarity scores for {} perfumes", similarityScores.size());
-        logger.info(similarityScores);
-
         return similarityScores.entrySet().stream()
-                .sorted(Map.Entry.<Long, Float>comparingByValue().reversed()).limit(limit)
-                .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
+                .sorted((e1, e2) -> Float.compare(e2.getValue(), e1.getValue()))
+                .limit(limit)
+                .collect(LinkedHashMap::new,
+                        (m, e) -> m.put(e.getKey(), e.getValue()),
+                        LinkedHashMap::putAll
+                );
     }
 
-    private float getNoteWeight(NoteResponse note) {
+    private static float getSimilarityScore(Map<Long, Float> userCollectionVector, Map.Entry<Long, Map<Long, Float>> perfumeEntry) {
+        Map<Long, Float> perfumeVector = perfumeEntry.getValue();
+
+        float similarityScore = 0.0f;
+
+        for (Map.Entry<Long, Float> noteEntry : userCollectionVector.entrySet()) {
+            Long collectionNoteId = noteEntry.getKey();
+            Float collectionNoteWeight = noteEntry.getValue();
+
+            Float perfumeNoteWeight = perfumeVector.getOrDefault(collectionNoteId, 0.0f);
+            similarityScore += collectionNoteWeight * perfumeNoteWeight;
+        }
+        return similarityScore;
+    }
+
+    private static float getNoteWeight(NoteResponse note) {
         return switch (note.type().toLowerCase()) {
             case "top" -> TOP_NOTE_SCORE;
             case "middle" -> MIDDLE_NOTE_SCORE;
