@@ -6,6 +6,7 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IRecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,8 +27,14 @@ public class RecommendationController {
                                                                                     @RequestParam(name = "correlationId", required = false, defaultValue = "") String correlationId) {
 
         var baseParam = new BaseParam(version, correlationId);
-        var response = recommendationService.getCBFRecommendations(limit, baseParam);
+        var response = recommendationService.getCBFRecommendations(getUserId(), limit, baseParam);
 
         return ResponseEntity.ok(response);
+    }
+
+    private Integer getUserId(){
+
+        return (Integer) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
     }
 }

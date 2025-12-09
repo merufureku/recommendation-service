@@ -3,14 +3,18 @@ package com.merufureku.aromatica.recommendation_service.services.impl;
 import com.merufureku.aromatica.recommendation_service.config.UrlConfig;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.CollectionsResponse;
+import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+
+import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.COLLECTION_SERVICE;
 
 @Service
 public class CollectionsService implements ICollectionService {
@@ -18,41 +22,54 @@ public class CollectionsService implements ICollectionService {
     private final Logger logger = LogManager.getLogger(this.getClass());
 
     private final RestTemplate restTemplate;
-    private final HttpServletRequest request;
     private final UrlConfig urlConfig;
+    private final TokenUtility tokenUtility;
+    private final RestExceptionHelper restExceptionHelper;
 
-    public CollectionsService(RestTemplate restTemplate, HttpServletRequest request, UrlConfig urlConfig) {
+    public CollectionsService(RestTemplate restTemplate, UrlConfig urlConfig, TokenUtility tokenUtility, RestExceptionHelper restExceptionHelper) {
         this.restTemplate = restTemplate;
-        this.request = request;
         this.urlConfig = urlConfig;
+        this.tokenUtility = tokenUtility;
+        this.restExceptionHelper = restExceptionHelper;
     }
 
-    public BaseResponse<CollectionsResponse> getUserCollections(int version, String correlationId) {
+    public BaseResponse<CollectionsResponse> getUserCollections(Integer userId, int version, String correlationId) {
 
-        var url = new StringBuilder();
-        url
-                .append(urlConfig.getCollectionUrl())
-                .append("/collections")
-                .append("?version=")
-                .append(version)
-                .append("&correlationId=")
-                .append(correlationId);
+        try{
+            var url = new StringBuilder();
+            url
+                    .append(urlConfig.getCollectionUrl())
+                    .append("/internal/collections/")
+                    .append(userId)
+                    .append("?version=")
+                    .append(version)
+                    .append("&correlationId=")
+                    .append(correlationId);
 
-        logger.info("Fetching User Collections from URL: {}", url.toString());
+            logger.info("Fetching User Collections from URL: {}", url.toString());
 
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(getAccessToken());
+            var headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(getAccessToken());
 
-        ResponseEntity<BaseResponse<CollectionsResponse>> responseEntity = restTemplate.exchange(
-                url.toString(), HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<>() {}
-        );
+            ResponseEntity<BaseResponse<CollectionsResponse>> responseEntity = restTemplate.exchange(
+                    url.toString(), HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<>() {}
+            );
 
-        return responseEntity.getBody();
+            logger.info("Successfully fetched User Collections for userId: {}", userId);
+            return responseEntity.getBody();
+        }
+        catch (HttpClientErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (Exception e){
+            logger.error("Unexpected error fetching User Collections: {}", e.getMessage());
+            throw e;
+        }
     }
 
     private String getAccessToken(){
-        return request.getHeader("Authorization").substring(7);
+        return tokenUtility.generateInternalToken(COLLECTION_SERVICE);
     }
 }
 

@@ -6,6 +6,6 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse
 
 public interface IRecommendationService {
 
-    BaseResponse<CBFResponse> getCBFRecommendations(int limit, BaseParam baseParam);
+    BaseResponse<CBFResponse> getCBFRecommendations(Integer userId, int limit, BaseParam baseParam);
 
 }

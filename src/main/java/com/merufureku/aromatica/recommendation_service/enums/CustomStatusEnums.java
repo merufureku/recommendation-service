@@ -6,11 +6,10 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum CustomStatusEnums {
 
-    NO_USER_FOUND(4000, "No User Found",HttpStatus.BAD_REQUEST),
+    NO_USER_FOUND(4000, "No User Found",HttpStatus.NOT_FOUND),
     INVALID_TOKEN(4001, "Invalid Token", HttpStatus.UNAUTHORIZED),
-    FRAGRANCE_NOT_FOUND(4002, "Perfume not found", HttpStatus.NOT_FOUND),
-    REVIEW_ALREADY_EXISTS(4003, "Review already exist", HttpStatus.CONFLICT),
-    REVIEW_NOT_FOUND(4004, "Review not found", HttpStatus.NOT_FOUND);
+    NO_USER_COLLECTION(4002, "User has no collection yet", HttpStatus.BAD_REQUEST),
+    INVALID_REQUEST(4003, "Invalid Request Occurred",HttpStatus.BAD_REQUEST);
 
 
     private int statusCode;
