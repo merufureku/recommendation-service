@@ -5,6 +5,6 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.Collections
 
 public interface ICollectionService {
 
-    BaseResponse<CollectionsResponse> getUserCollections(int version, String correlationId);
+    BaseResponse<CollectionsResponse> getUserCollections(Integer userId, int version, String correlationId);
 
 }

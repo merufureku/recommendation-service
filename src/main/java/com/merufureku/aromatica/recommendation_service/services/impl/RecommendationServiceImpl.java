@@ -6,6 +6,7 @@ import com.merufureku.aromatica.recommendation_service.dto.params.FragranceBatch
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.CollectionsResponse;
+import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import com.merufureku.aromatica.recommendation_service.helper.RecommendationHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
@@ -14,14 +15,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_USER_COLLECTION;
+
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class RecommendationServiceImpl implements IRecommendationService {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
@@ -37,21 +38,28 @@ public class RecommendationServiceImpl implements IRecommendationService {
     }
 
     @Override
-    public BaseResponse<CBFResponse> getCBFRecommendations(int limit, BaseParam baseParam) {
+    public BaseResponse<CBFResponse> getCBFRecommendations(Integer userId, int limit, BaseParam baseParam) {
 
-        var userCollections = collectionsService.getUserCollections(1, "correlationId").data();
+        var userCollections = collectionsService.getUserCollections(userId, 1, "correlationId").data();
 
-        var userCollectionIds = userCollections.items()
+        logger.info("User Collections for CBF: {}", userCollections);
+        if (userCollections.fragrances().isEmpty()){
+            throw new ServiceException(NO_USER_COLLECTION);
+        }
+
+        var userCollectionIds = userCollections.fragrances()
                 .stream().map(CollectionsResponse.FragranceDetails::fragranceId)
                 .collect(Collectors.toSet());
 
         logger.info("Fragrance IDs for CBF: {}", userCollectionIds);
 
+        // to add async call here
         var userCollectionNotes = fragranceService.getPerfumeNotes(new FragranceBatchNotesParam(userCollectionIds), 1, "correlationId");
         var allFragranceNotes = fragranceService.getPerfumeNotes(new ExcludeFragranceBatchNotesParam(userCollectionIds), 1, "correlationId");
 
         logger.info("CBF Recommendation result: {}", userCollectionNotes);
 
+        // to add async call here
         var userFragranceVector = recommendationHelper.getCollectionVector(userCollectionNotes.data().fragranceNoteLists());
         var allFragranceVector = recommendationHelper.getAllPerfumesVector(allFragranceNotes.data());
 
