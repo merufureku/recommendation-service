@@ -1,5 +1,7 @@
 package com.merufureku.aromatica.recommendation_service.helper;
 
+import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse;
+import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceDetailedListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.NoteResponse;
 import org.springframework.stereotype.Component;
@@ -81,6 +83,27 @@ public class RecommendationHelper {
             similarityScore += collectionNoteWeight * perfumeNoteWeight;
         }
         return similarityScore;
+    }
+
+    public List<CBFResponse.Recommendations> createCbfResponse(Map<Long, FragranceDetailedListResponse.FragranceDetailedResponse> fragranceMap,
+                                         Map<Long, Float> cbfResult) {
+        return cbfResult.entrySet().stream()
+                .map(entry -> {
+
+                    Long id = entry.getKey();
+                    Float score = entry.getValue();
+
+                    var fragrance = fragranceMap.get(id);
+
+                    return new CBFResponse.Recommendations(
+                            fragrance.fragranceId(),
+                            fragrance.name(),
+                            fragrance.brand(),
+                            fragrance.description(),
+                            score
+                    );
+                })
+                .toList();
     }
 
     private static float getNoteWeight(NoteResponse note) {

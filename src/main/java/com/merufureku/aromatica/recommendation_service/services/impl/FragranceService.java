@@ -1,11 +1,11 @@
 package com.merufureku.aromatica.recommendation_service.services.impl;
 
 import com.merufureku.aromatica.recommendation_service.config.UrlConfig;
-import com.merufureku.aromatica.recommendation_service.dto.params.ExcludeFragranceBatchNotesParam;
-import com.merufureku.aromatica.recommendation_service.dto.params.FragranceBatchNotesParam;
+import com.merufureku.aromatica.recommendation_service.dto.params.ExcludeFragranceBatchParam;
+import com.merufureku.aromatica.recommendation_service.dto.params.GetFragranceBatchParam;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
+import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceDetailedListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceResponse;
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
 import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
@@ -36,7 +36,38 @@ public class FragranceService implements IFragranceService {
         this.restExceptionHelper = restExceptionHelper;
     }
 
-    public BaseResponse<FragranceNoteListResponse> getPerfumeNotes(FragranceBatchNotesParam param, int version, String correlationId) {
+    @Override
+    public BaseResponse<FragranceDetailedListResponse> getPerfumes(GetFragranceBatchParam param, int version, String correlationId) {
+        try{
+            var url = new StringBuilder();
+            url
+                    .append(urlConfig.getFragranceUrl())
+                    .append("/internal/fragrances/batch/full")
+                    .append("?version=")
+                    .append(version)
+                    .append("&correlationId=")
+                    .append(correlationId);
+
+            logger.info("Fetching perfumes from URL: {}", url.toString());
+
+            var headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(getToken());
+
+            ResponseEntity<BaseResponse<FragranceDetailedListResponse>> responseEntity = restTemplate.exchange(
+                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, headers), new ParameterizedTypeReference<>() {}
+            );
+
+            logger.info("Received perfumes response with status code: {}", responseEntity.getStatusCode());
+            return responseEntity.getBody();
+        }
+        catch (HttpClientErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+    }
+
+    @Override
+    public BaseResponse<FragranceNoteListResponse> getPerfumeNotes(GetFragranceBatchParam param, int version, String correlationId) {
         try{
             var url = new StringBuilder();
             url
@@ -66,7 +97,7 @@ public class FragranceService implements IFragranceService {
     }
 
     @Override
-    public BaseResponse<FragranceNoteListResponse> getPerfumeNotes(ExcludeFragranceBatchNotesParam param, int version, String correlationId) {
+    public BaseResponse<FragranceNoteListResponse> getPerfumeNotes(ExcludeFragranceBatchParam param, int version, String correlationId) {
         try {
             var url = new StringBuilder();
             url
@@ -95,39 +126,8 @@ public class FragranceService implements IFragranceService {
         }
     }
 
-    @Override
-    public BaseResponse<FragranceResponse> getPerfumeById(Long fragranceId, int version, String correlationId) {
-        try{
-            var url = new StringBuilder();
-            url
-                    .append(urlConfig.getFragranceUrl())
-                    .append("/public/fragrances/")
-                    .append(fragranceId)
-                    .append("?version=")
-                    .append(version)
-                    .append("&correlationId=")
-                    .append(correlationId);
-
-            logger.info("Fetching perfume by ID from URL: {}", url.toString());
-
-            var headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            ResponseEntity<BaseResponse<FragranceResponse>> responseEntity = restTemplate.exchange(
-                    url.toString(), HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<>() {}
-            );
-
-            logger.info("Received perfume by ID response with status code: {}", responseEntity.getStatusCode());
-            return responseEntity.getBody();
-        }
-        catch (HttpClientErrorException ex){
-            throw restExceptionHelper.handleException(ex);
-        }
-    }
-
     private String getToken(){
         return tokenUtility.generateInternalToken(FRAGRANCE_SERVICE);
     }
-
 }
 
