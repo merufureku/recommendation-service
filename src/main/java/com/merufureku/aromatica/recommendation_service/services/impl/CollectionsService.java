@@ -3,6 +3,7 @@ package com.merufureku.aromatica.recommendation_service.services.impl;
 import com.merufureku.aromatica.recommendation_service.config.UrlConfig;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.CollectionsResponse;
+import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
 import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
@@ -15,6 +16,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.COLLECTION_SERVICE;
+import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_USER_COLLECTION;
 
 @Service
 public class CollectionsService implements ICollectionService {
@@ -57,6 +59,12 @@ public class CollectionsService implements ICollectionService {
             );
 
             logger.info("Successfully fetched User Collections for userId: {}", userId);
+
+            if (responseEntity.getBody() == null || responseEntity.getBody().data() == null) {
+                logger.error("No response received from Collection Service for userId: {}", userId);
+                throw new ServiceException(NO_USER_COLLECTION);
+            }
+
             return responseEntity.getBody();
         }
         catch (HttpClientErrorException ex){

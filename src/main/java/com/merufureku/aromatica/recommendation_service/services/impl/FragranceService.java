@@ -6,6 +6,8 @@ import com.merufureku.aromatica.recommendation_service.dto.params.GetFragranceBa
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceDetailedListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
+import com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums;
+import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
 import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
@@ -18,6 +20,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.FRAGRANCE_SERVICE;
+import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NOTE_NOT_EXIST;
 
 @Service
 public class FragranceService implements IFragranceService {
@@ -89,6 +92,10 @@ public class FragranceService implements IFragranceService {
             );
 
             logger.info("Received perfume notes response with status code: {}", responseEntity.getStatusCode());
+
+            if (responseEntity.getBody() == null || responseEntity.getBody().data() == null) {
+                throw new ServiceException(NOTE_NOT_EXIST);
+            }
             return responseEntity.getBody();
         }
         catch (HttpClientErrorException ex){
@@ -117,6 +124,10 @@ public class FragranceService implements IFragranceService {
             ResponseEntity<BaseResponse<FragranceNoteListResponse>> responseEntity = restTemplate.exchange(
                     url.toString(), HttpMethod.POST, new HttpEntity<>(param, headers), new ParameterizedTypeReference<>() {}
             );
+
+            if (responseEntity.getBody() == null || responseEntity.getBody().data() == null) {
+                throw new ServiceException(NOTE_NOT_EXIST);
+            }
 
             logger.info("Received All perfume and notes response with status code: {}", responseEntity.getStatusCode());
             return responseEntity.getBody();
