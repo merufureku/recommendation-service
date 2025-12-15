@@ -4,6 +4,7 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceDetailedListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.NoteResponse;
+import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -12,11 +13,17 @@ import java.util.List;
 import java.util.Map;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.*;
+import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_FRAGRANCE_TO_RECOMMEND;
+import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_USER_COLLECTION;
 
 @Component
 public class RecommendationHelper {
 
     public Map<Long, Float> getCollectionVector(List<FragranceNoteListResponse.FragranceNoteList> fragranceNoteLists) {
+
+        if (fragranceNoteLists.isEmpty()) {
+            throw new ServiceException(NO_USER_COLLECTION);
+        }
 
         Map<Long, Float> noteVector = new HashMap<>();
 
@@ -31,6 +38,11 @@ public class RecommendationHelper {
     }
 
     public Map<Long, Map<Long, Float>> getAllPerfumesVector(FragranceNoteListResponse allPerfumes){
+
+        if (allPerfumes.fragranceNoteLists().isEmpty()) {
+            throw new ServiceException(NO_FRAGRANCE_TO_RECOMMEND);
+        }
+
         Map<Long, Map<Long, Float>> allPerfumeVector = new HashMap<>();
 
         for (FragranceNoteListResponse.FragranceNoteList noteList: allPerfumes.fragranceNoteLists()) {

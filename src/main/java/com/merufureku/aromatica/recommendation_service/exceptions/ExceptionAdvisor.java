@@ -1,5 +1,6 @@
 package com.merufureku.aromatica.recommendation_service.exceptions;
 
+import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -7,10 +8,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
 
 @RestControllerAdvice
@@ -51,6 +54,22 @@ public class ExceptionAdvisor extends Exception{
         return ResponseEntity.badRequest().body(errors);
     }
 
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Object> handleConstraintViolation(
+            HandlerMethodValidationException ex,
+            HttpServletRequest request) {
+
+        var errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                Arrays.stream(ex.getDetailMessageArguments()).findFirst().get().toString(),
+                request.getRequestURI(),
+                LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(
             NoHandlerFoundException ex,
@@ -74,5 +93,4 @@ public class ExceptionAdvisor extends Exception{
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
-
 }
