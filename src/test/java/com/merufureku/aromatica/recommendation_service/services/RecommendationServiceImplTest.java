@@ -1,0 +1,126 @@
+package com.merufureku.aromatica.recommendation_service.services;
+
+import com.merufureku.aromatica.recommendation_service.dto.params.BaseParam;
+import com.merufureku.aromatica.recommendation_service.dto.params.GetFragranceBatchParam;
+import com.merufureku.aromatica.recommendation_service.dto.responses.*;
+import com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums;
+import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
+import com.merufureku.aromatica.recommendation_service.helper.RecommendationHelper;
+import com.merufureku.aromatica.recommendation_service.services.impl.AsyncFragranceClient;
+import com.merufureku.aromatica.recommendation_service.services.impl.AsyncVectorBuilder;
+import com.merufureku.aromatica.recommendation_service.services.impl.RecommendationServiceImpl;
+import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
+import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class RecommendationServiceImplTest {
+
+    @InjectMocks
+    private RecommendationServiceImpl recommendationService;
+
+    @Mock
+    private ICollectionService collectionsService;
+
+    @Mock
+    private IFragranceService fragranceService;
+
+    @Mock
+    private RecommendationHelper recommendationHelper;
+
+    @Mock
+    private AsyncFragranceClient asyncFragranceClient;
+
+    @Mock
+    private AsyncVectorBuilder asyncVectorBuilder;
+
+    private static final Integer USER_ID = 1;
+    private static final int LIMIT = 5;
+    private static final BaseParam BASE_PARAM = new BaseParam(USER_ID, "corr-1");
+
+    @Test
+    void getCBFRecommendations_whenUserHasCollections_shouldReturnRecommendations() {
+        // user collections
+        var fragranceDetails = Collections.singletonList(
+                new CollectionsResponse.FragranceDetails(1L, "name", "brand")
+        );
+        var collectionsResponse = new CollectionsResponse(USER_ID, fragranceDetails);
+        var collectionsBaseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", collectionsResponse);
+
+        when(collectionsService.getUserCollections(eq(USER_ID), anyInt(), anyString())).thenReturn(collectionsBaseResponse);
+
+        // async note fetching
+        var userNotes = new FragranceNoteListResponse(Collections.emptyList());
+        var allNotes = new FragranceNoteListResponse(Collections.emptyList());
+        when(asyncFragranceClient.getUserCollectionNotes(anySet(), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(userNotes));
+        when(asyncFragranceClient.getAllFragranceNotes(anySet(), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(allNotes));
+
+        // async vector building
+        Map<Long, Float> userVector = new HashMap<>();
+        Map<Long, Map<Long, Float>> allVectors = new HashMap<>();
+        when(asyncVectorBuilder.buildUserVector(anyList()))
+                .thenReturn(CompletableFuture.completedFuture(userVector));
+        when(asyncVectorBuilder.buildAllPerfumeVectors(any(FragranceNoteListResponse.class)))
+            .thenReturn(CompletableFuture.completedFuture(allVectors));
+
+        // CBF calculation
+        Map<Long, Float> cbfResult = new LinkedHashMap<>();
+        cbfResult.put(1L, 0.9f);
+        when(recommendationHelper.calculateCBFRecommendations(eq(userVector), eq(allVectors), eq(LIMIT)))
+                .thenReturn(cbfResult);
+
+        // fragrance metadata
+        var detailedResponses = Collections.singletonList(
+                new FragranceDetailedListResponse.FragranceDetailedResponse(1L, "name", "brand", "desc", Collections.emptyList())
+        );
+        var detailedListResponse = new FragranceDetailedListResponse(detailedResponses);
+        var fragranceBaseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", detailedListResponse);
+        when(fragranceService.getPerfumes(any(GetFragranceBatchParam.class), anyInt(), anyString()))
+                .thenReturn(fragranceBaseResponse);
+
+        // final CBF response creation
+        List<CBFResponse.Recommendations> cbfData = Collections.singletonList(
+                new CBFResponse.Recommendations(1L, "name", "brand", "desc", 0.9f)
+        );
+        when(recommendationHelper.createCbfResponse(anyMap(), anyMap())).thenReturn(cbfData);
+
+        BaseResponse<CBFResponse> response = recommendationService.getCBFRecommendations(USER_ID, LIMIT, BASE_PARAM);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK.value(), response.status());
+        assertNotNull(response.data());
+        assertEquals(1, response.data().recommendations().size());
+    }
+
+    @Test
+    void getCBFRecommendations_whenUserHasNoCollections_shouldThrowServiceException() {
+        var collectionsResponse = new CollectionsResponse(USER_ID, Collections.emptyList());
+        var collectionsBaseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", collectionsResponse);
+
+        when(collectionsService.getUserCollections(eq(USER_ID), anyInt(), anyString())).thenReturn(collectionsBaseResponse);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> recommendationService.getCBFRecommendations(USER_ID, LIMIT, BASE_PARAM));
+
+        assertEquals(CustomStatusEnums.NO_USER_COLLECTION, exception.getCustomStatusEnums());
+
+        verify(asyncFragranceClient, never()).getUserCollectionNotes(anySet(), anyString());
+        verify(asyncFragranceClient, never()).getAllFragranceNotes(anySet(), anyString());
+        verify(asyncVectorBuilder, never()).buildUserVector(anyList());
+        verify(asyncVectorBuilder, never()).buildAllPerfumeVectors(any(FragranceNoteListResponse.class));
+    }
+}
