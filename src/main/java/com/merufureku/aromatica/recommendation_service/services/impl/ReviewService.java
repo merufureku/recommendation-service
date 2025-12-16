@@ -3,10 +3,9 @@ package com.merufureku.aromatica.recommendation_service.services.impl;
 import com.merufureku.aromatica.recommendation_service.config.UrlConfig;
 import com.merufureku.aromatica.recommendation_service.dto.params.GetFragranceBatchParam;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.CollectionsResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.UserCollectionsResponse;
+import com.merufureku.aromatica.recommendation_service.dto.responses.GetAllReviews;
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
-import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
+import com.merufureku.aromatica.recommendation_service.services.interfaces.IReviewService;
 import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,10 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.COLLECTION_SERVICE;
+import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.REVIEW_SERVICE;
 
 @Service
-public class CollectionsService implements ICollectionService {
+public class ReviewService implements IReviewService {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
 
@@ -28,7 +27,7 @@ public class CollectionsService implements ICollectionService {
     private final TokenUtility tokenUtility;
     private final RestExceptionHelper restExceptionHelper;
 
-    public CollectionsService(RestTemplate restTemplate, UrlConfig urlConfig, TokenUtility tokenUtility, RestExceptionHelper restExceptionHelper) {
+    public ReviewService(RestTemplate restTemplate, UrlConfig urlConfig, TokenUtility tokenUtility, RestExceptionHelper restExceptionHelper) {
         this.restTemplate = restTemplate;
         this.urlConfig = urlConfig;
         this.tokenUtility = tokenUtility;
@@ -36,69 +35,65 @@ public class CollectionsService implements ICollectionService {
     }
 
     @Override
-    public BaseResponse<UserCollectionsResponse> getUserCollections(Integer userId, int version, String correlationId) {
+    public BaseResponse<GetAllReviews> getUserReviews(int userId, int minRating, int version, String correlationId) {
 
         try{
             var url = new StringBuilder();
             url
-                    .append(urlConfig.getCollectionUrl())
-                    .append("/internal/collections/")
+                    .append(urlConfig.getReviewUrl())
+                    .append("/internal/reviews/")
                     .append(userId)
-                    .append("?version=")
+                    .append("?minRating=")
+                    .append(minRating)
+                    .append("&version=")
                     .append(version)
                     .append("&correlationId=")
                     .append(correlationId);
 
-            logger.info("Fetching User Collections from URL: {}", url.toString());
+            logger.info("Fetching user reviews from URL: {}", url.toString());
 
-            ResponseEntity<BaseResponse<UserCollectionsResponse>> responseEntity = restTemplate.exchange(
+            ResponseEntity<BaseResponse<GetAllReviews>> responseEntity = restTemplate.exchange(
                     url.toString(), HttpMethod.GET, new HttpEntity<>(getHeaders()), new ParameterizedTypeReference<>() {}
             );
 
-            logger.info("Successfully fetched User Collections for userId: {}", userId);
+            logger.info("Fetching user reviews from URL: {} success", url.toString());
 
             return responseEntity.getBody();
         }
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
         }
-        catch (Exception e){
-            logger.error("Unexpected error fetching User Collections: {}", e.getMessage());
-            throw e;
-        }
     }
 
     @Override
-    public BaseResponse<CollectionsResponse> getAllCollectionsFromSimilarFragrance(Integer excludedUserId, GetFragranceBatchParam param, int version, String correlationId) {
+    public BaseResponse<GetAllReviews> getReviews(Integer excludedUserId, GetFragranceBatchParam param, int minRating, int version, String correlationId) {
 
         try{
             var url = new StringBuilder();
             url
-                    .append(urlConfig.getCollectionUrl())
-                    .append("/internal/collections/batch")
-                    .append("?excludeUserId=")
+                    .append(urlConfig.getReviewUrl())
+                    .append("/internal/reviews")
+                    .append("?minRating=")
+                    .append(minRating)
+                    .append("&excludedUserId=")
                     .append(excludedUserId)
                     .append("&version=")
                     .append(version)
                     .append("&correlationId=")
                     .append(correlationId);
 
-            logger.info("Fetching all collections with users who have collected fragrance IDs: {} from URL: {}", param.fragranceIds(), url.toString());
+            logger.info("Fetching reviews for fragrance IDs: {} from URL: {}", param.fragranceIds(), url.toString());
 
-            ResponseEntity<BaseResponse<CollectionsResponse>> responseEntity = restTemplate.exchange(
+            ResponseEntity<BaseResponse<GetAllReviews>> responseEntity = restTemplate.exchange(
                     url.toString(), HttpMethod.POST, new HttpEntity<>(param, getHeaders()), new ParameterizedTypeReference<>() {}
             );
 
-            logger.info("Successfully fetched User Collections for fragrance IDs: {}", param.fragranceIds());
+            logger.info("Fetching reviews for fragrance IDs: {} from URL: {} success", param.fragranceIds(), url.toString());
 
             return responseEntity.getBody();
         }
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
-        }
-        catch (Exception e){
-            logger.error("Unexpected error fetching User Collections: {}", e.getMessage());
-            throw e;
         }
     }
 
@@ -110,7 +105,6 @@ public class CollectionsService implements ICollectionService {
     }
 
     private String getToken(){
-        return tokenUtility.generateInternalToken(COLLECTION_SERVICE);
+        return tokenUtility.generateInternalToken(REVIEW_SERVICE);
     }
 }
-

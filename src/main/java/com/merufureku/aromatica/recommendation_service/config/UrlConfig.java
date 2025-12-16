@@ -1,8 +1,10 @@
 package com.merufureku.aromatica.recommendation_service.config;
 
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Getter
 @Service
 public class UrlConfig {
 
@@ -12,7 +14,6 @@ public class UrlConfig {
     @Value("${url.fragrance}")
     private String fragranceUrl;
 
-    public String getCollectionUrl() { return collectionUrl; }
-
-    public String getFragranceUrl() { return fragranceUrl; }
+    @Value("${url.review}")
+    private String reviewUrl;
 }

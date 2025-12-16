@@ -6,7 +6,6 @@ import com.merufureku.aromatica.recommendation_service.dto.params.GetFragranceBa
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceDetailedListResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
-import com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums;
 import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
@@ -53,15 +52,12 @@ public class FragranceService implements IFragranceService {
 
             logger.info("Fetching perfumes from URL: {}", url.toString());
 
-            var headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(getToken());
-
             ResponseEntity<BaseResponse<FragranceDetailedListResponse>> responseEntity = restTemplate.exchange(
-                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, headers), new ParameterizedTypeReference<>() {}
+                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, getHeaders()), new ParameterizedTypeReference<>() {}
             );
 
             logger.info("Received perfumes response with status code: {}", responseEntity.getStatusCode());
+
             return responseEntity.getBody();
         }
         catch (HttpClientErrorException ex){
@@ -83,12 +79,8 @@ public class FragranceService implements IFragranceService {
 
             logger.info("Fetching perfume notes from URL: {}", url.toString());
 
-            var headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(getToken());
-
             ResponseEntity<BaseResponse<FragranceNoteListResponse>> responseEntity = restTemplate.exchange(
-                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, headers), new ParameterizedTypeReference<>() {}
+                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, getHeaders()), new ParameterizedTypeReference<>() {}
             );
 
             logger.info("Received perfume notes response with status code: {}", responseEntity.getStatusCode());
@@ -117,12 +109,8 @@ public class FragranceService implements IFragranceService {
 
             logger.info("Fetching All perfume and notes from URL: {}", url.toString());
 
-            var headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(getToken());
-
             ResponseEntity<BaseResponse<FragranceNoteListResponse>> responseEntity = restTemplate.exchange(
-                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, headers), new ParameterizedTypeReference<>() {}
+                    url.toString(), HttpMethod.POST, new HttpEntity<>(param, getHeaders()), new ParameterizedTypeReference<>() {}
             );
 
             if (responseEntity.getBody() == null || responseEntity.getBody().data() == null) {
@@ -135,6 +123,13 @@ public class FragranceService implements IFragranceService {
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
         }
+    }
+
+    private HttpHeaders getHeaders(){
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(getToken());
+        return headers;
     }
 
     private String getToken(){

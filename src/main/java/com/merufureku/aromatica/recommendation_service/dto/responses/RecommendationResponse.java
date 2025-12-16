@@ -2,7 +2,7 @@ package com.merufureku.aromatica.recommendation_service.dto.responses;
 
 import java.util.List;
 
-public record CBFResponse(List<Recommendations> recommendations) {
+public record RecommendationResponse(List<Recommendations> recommendations) {
 
     public record Recommendations(Long fragranceId, String name, String brand, String description, Float similarityScore){}
 

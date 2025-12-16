@@ -1,8 +1,10 @@
-package com.merufureku.aromatica.recommendation_service.services.impl;
+package com.merufureku.aromatica.recommendation_service.services.async;
 
 import com.merufureku.aromatica.recommendation_service.dto.params.ExcludeFragranceBatchParam;
 import com.merufureku.aromatica.recommendation_service.dto.params.GetFragranceBatchParam;
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
+import com.merufureku.aromatica.recommendation_service.services.impl.FragranceService;
+import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class AsyncFragranceClient {
 
-    private final FragranceService fragranceService;
+    private final IFragranceService fragranceService;
 
     public AsyncFragranceClient(FragranceService fragranceService) {
         this.fragranceService = fragranceService;
