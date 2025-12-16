@@ -2,7 +2,7 @@ package com.merufureku.aromatica.recommendation_service.controller;
 
 import com.merufureku.aromatica.recommendation_service.dto.params.BaseParam;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse;
+import com.merufureku.aromatica.recommendation_service.dto.responses.RecommendationResponse;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IRecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -25,15 +25,30 @@ public class RecommendationController {
 
     @GetMapping("/recommendations/cbf")
     @Operation(summary = "Get content-based recommendations for a user")
-    public ResponseEntity<BaseResponse<CBFResponse>> getContentBasedRecommendations(@Valid @RequestParam(name = "limit", defaultValue = "10")
-                                                                                    @Min(value = 1, message = "limit must be at least 1")
-                                                                                    @Max(value = 10, message = "limit must be at most 10")
-                                                                                    int limit,
-                                                                                    @RequestParam(name = "version", required = false, defaultValue = "1") int version,
-                                                                                    @RequestParam(name = "correlationId", required = false, defaultValue = "recommendation") String correlationId) {
+    public ResponseEntity<BaseResponse<RecommendationResponse>> getContentBasedRecommendations(@Valid @RequestParam(name = "limit", defaultValue = "10")
+                                                                                               @Min(value = 1, message = "limit must be at least 1")
+                                                                                               @Max(value = 10, message = "limit must be at most 10")
+                                                                                               int limit,
+                                                                                               @RequestParam(name = "version", required = false, defaultValue = "1") int version,
+                                                                                               @RequestParam(name = "correlationId", required = false, defaultValue = "recommendation") String correlationId) {
 
         var baseParam = new BaseParam(version, correlationId);
         var response = recommendationService.getCBFRecommendations(getUserId(), limit, baseParam);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/recommendations/cf")
+    @Operation(summary = "Get collaborative filtering recommendations for a user")
+    public ResponseEntity<BaseResponse<RecommendationResponse>> getCollaborativeBasedRecommendations(@Valid @RequestParam(name = "limit", defaultValue = "10")
+                                                                                                     @Min(value = 1, message = "limit must be at least 1")
+                                                                                                     @Max(value = 10, message = "limit must be at most 10")
+                                                                                                     int limit,
+                                                                                                     @RequestParam(name = "version", required = false, defaultValue = "1") int version,
+                                                                                                     @RequestParam(name = "correlationId", required = false, defaultValue = "recommendation") String correlationId) {
+
+        var baseParam = new BaseParam(version, correlationId);
+        var response = recommendationService.getCFRecommendations(getUserId(), limit, baseParam);
 
         return ResponseEntity.ok(response);
     }

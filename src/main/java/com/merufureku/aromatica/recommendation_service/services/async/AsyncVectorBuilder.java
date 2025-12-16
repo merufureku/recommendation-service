@@ -1,4 +1,4 @@
-package com.merufureku.aromatica.recommendation_service.services.impl;
+package com.merufureku.aromatica.recommendation_service.services.async;
 
 import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
 import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;

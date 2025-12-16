@@ -1,16 +1,11 @@
 package com.merufureku.aromatica.recommendation_service.helper;
 
-import com.merufureku.aromatica.recommendation_service.dto.responses.CBFResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceDetailedListResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.FragranceNoteListResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.NoteResponse;
+import com.merufureku.aromatica.recommendation_service.dto.responses.*;
 import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.*;
 import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_FRAGRANCE_TO_RECOMMEND;
@@ -61,8 +56,8 @@ public class RecommendationHelper {
     }
 
     public Map<Long, Float> calculateCBFRecommendations(Map<Long, Float> userCollectionVector,
-                                                Map<Long, Map<Long, Float>> allPerfumesVector,
-                                                int limit) {
+                                                        Map<Long, Map<Long, Float>> allPerfumesVector,
+                                                        int limit) {
 
         Map<Long, Float> similarityScores = new HashMap<>();
 
@@ -97,8 +92,8 @@ public class RecommendationHelper {
         return similarityScore;
     }
 
-    public List<CBFResponse.Recommendations> createCbfResponse(Map<Long, FragranceDetailedListResponse.FragranceDetailedResponse> fragranceMap,
-                                         Map<Long, Float> cbfResult) {
+    public List<RecommendationResponse.Recommendations> createCbfResponse(Map<Long, FragranceDetailedListResponse.FragranceDetailedResponse> fragranceMap,
+                                                                          Map<Long, Float> cbfResult) {
         return cbfResult.entrySet().stream()
                 .map(entry -> {
 
@@ -107,7 +102,7 @@ public class RecommendationHelper {
 
                     var fragrance = fragranceMap.get(id);
 
-                    return new CBFResponse.Recommendations(
+                    return new RecommendationResponse.Recommendations(
                             fragrance.fragranceId(),
                             fragrance.name(),
                             fragrance.brand(),
@@ -116,6 +111,165 @@ public class RecommendationHelper {
                     );
                 })
                 .toList();
+    }
+
+    public List<RecommendationResponse.Recommendations> createCfResponse(
+            Map<Long, FragranceDetailedListResponse.FragranceDetailedResponse> fragranceMap,
+            Map<Long, Float> cfResult) {
+
+        List<RecommendationResponse.Recommendations> recommendations = fragranceMap.entrySet().stream()
+                .map(entry -> {
+                    Long id = entry.getKey();
+                    var fragrance = entry.getValue();
+                    Float score = cfResult.getOrDefault(id, 0.0f);
+
+                    return new RecommendationResponse.Recommendations(
+                            fragrance.fragranceId(),
+                            fragrance.name(),
+                            fragrance.brand(),
+                            fragrance.description(),
+                            score
+                    );
+                })
+                .toList();
+
+        return recommendations.stream()
+                .sorted(Comparator.comparing(RecommendationResponse.Recommendations::similarityScore).reversed())
+                .toList();
+    }
+
+
+    public Map<Integer, Map<Long, Float>> targetUserInteraction(UserCollectionsResponse userCollectionsResponse, GetAllReviews userReviews){
+
+        Map<Long, Float> interactions = new HashMap<>();
+
+        for (UserCollectionsResponse.FragranceDetails fragranceDetails : userCollectionsResponse.fragrances()) {
+            interactions.merge(fragranceDetails.fragranceId(), 1.0F, Float::sum);
+        }
+
+        for (GetAllReviews.Interactions review : userReviews.interactions()) {
+
+            long fragranceId = review.fragranceId();
+            float interactionWeight = getInteractionWeight(review.rating());
+
+            interactions.merge(fragranceId, interactionWeight, Float::sum);
+        }
+
+        Map<Integer, Map<Long, Float>> userInteractions = new HashMap<>();
+        userInteractions.put(userCollectionsResponse.userId(), interactions);
+
+        return userInteractions;
+    }
+
+    public Map<Integer, Map<Long, Float>> allUserInteraction(CollectionsResponse collectedFragrances, GetAllReviews userReviews) {
+
+        Map<Integer, Map<Long, Float>> userInteractions = new HashMap<>();
+
+        for (CollectionsResponse.FragranceDetails collection : collectedFragrances.fragrances()) {
+            Integer userId = collection.userId();
+            Long fragranceId = collection.fragranceId();
+
+            userInteractions.computeIfAbsent(userId, k -> new HashMap<>())
+                    .merge(fragranceId, 1.0F, Float::sum);
+        }
+
+        for (GetAllReviews.Interactions review : userReviews.interactions()) {
+
+            Integer userId = review.userId();
+            Long fragranceId = review.fragranceId();
+            float weight = getInteractionWeight(review.rating());
+
+            userInteractions
+                    .computeIfAbsent(userId, k -> new HashMap<>())
+                    .merge(fragranceId, weight, Float::sum);
+        }
+
+        return userInteractions;
+    }
+
+    public Map<Integer, Float> getSimilarity(Map<Integer, Map<Long, Float>> targetUserInteraction, Map<Integer, Map<Long, Float>> allUserInteractions) {
+
+        var similarityResult = new HashMap<Integer, Float>();
+
+        // Extract target user's interaction map
+        var targetInteractions = targetUserInteraction.values().iterator().next();
+
+        for (Map.Entry<Integer, Map<Long, Float>> allUsersEntry : allUserInteractions.entrySet()) {
+
+            var similarUserId = allUsersEntry.getKey();
+            var similarUserInteractions = allUsersEntry.getValue();
+
+            var similarityScore = 0.0f;
+
+            // Iterate ALL fragrances of the similar user
+            for (Map.Entry<Long, Float> similarEntry : similarUserInteractions.entrySet()) {
+
+                var fragranceId = similarEntry.getKey();
+                var similarWeight = similarEntry.getValue();
+
+                var targetWeight = targetInteractions.get(fragranceId);
+                if (targetWeight != null) {
+                    similarityScore += Math.min(similarWeight, targetWeight);
+                }
+            }
+
+            if (similarityScore > 0) {
+                similarityResult.put(similarUserId, similarityScore);
+            }
+        }
+
+        return similarityResult;
+    }
+
+    public Map<Long, Float> getTopCandidatePerfumes(List<Integer> topSimilarUsers, Set<Long> excludedPerfumes, Map<Integer, Map<Long, Float>> allUserInteractions, int limit){
+
+        Map<Long, Float> perfumesScore = new HashMap<>();
+
+        for (Integer userId : topSimilarUsers) {
+            Map<Long, Float> userInteractions = allUserInteractions.get(userId);
+            if (userInteractions != null) {
+
+                for (Map.Entry<Long, Float> entry : userInteractions.entrySet()) {
+                    Long perfumeId = entry.getKey();
+                    Float score = entry.getValue();
+
+                    if (excludedPerfumes.contains(perfumeId)) continue;
+
+                    perfumesScore.merge(perfumeId, score, Float::sum);
+                }
+            }
+        }
+
+        return perfumesScore.entrySet().stream()
+                .sorted(Map.Entry.<Long, Float>comparingByValue().reversed())
+                .limit(limit)
+                .collect(
+                        LinkedHashMap::new,
+                        (m, e) -> m.put(e.getKey(), e.getValue()),
+                        LinkedHashMap::putAll
+                );
+
+    }
+
+    public Set<Long> getHighestRecommendedPerfumes(Map<Long, Float> allUsersInteractions, Set<Long> excludedPerfumes, int limit) {
+
+        return allUsersInteractions.entrySet()
+                .stream()
+                .filter(entry -> !excludedPerfumes.contains(entry.getKey()))
+                .sorted((e1, e2) -> Float.compare(e2.getValue(), e1.getValue()))
+                .limit(limit)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+    }
+
+    private static float getInteractionWeight(int rating) {
+        if (rating >= 4.8) {
+            return EXCELLENT;
+        } else if (rating >= 4.5) {
+            return GREAT;
+        } else {
+            return AVERAGE;
+        }
     }
 
     private static float getNoteWeight(NoteResponse note) {

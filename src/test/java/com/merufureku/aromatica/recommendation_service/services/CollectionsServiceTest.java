@@ -2,7 +2,7 @@ package com.merufureku.aromatica.recommendation_service.services;
 
 import com.merufureku.aromatica.recommendation_service.config.UrlConfig;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
-import com.merufureku.aromatica.recommendation_service.dto.responses.CollectionsResponse;
+import com.merufureku.aromatica.recommendation_service.dto.responses.UserCollectionsResponse;
 import com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums;
 import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
@@ -49,7 +49,7 @@ class CollectionsServiceTest {
 
     @Test
     void getUserCollections_whenSuccessful_shouldReturnResponse() {
-        var collectionsResponse = new CollectionsResponse(USER_ID, Collections.emptyList());
+        var collectionsResponse = new UserCollectionsResponse(USER_ID, Collections.emptyList());
         var baseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", collectionsResponse);
 
         when(urlConfig.getCollectionUrl()).thenReturn("http://collection-service");
@@ -57,7 +57,7 @@ class CollectionsServiceTest {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(baseResponse, HttpStatus.OK));
 
-        BaseResponse<CollectionsResponse> response = collectionsService.getUserCollections(USER_ID, VERSION, CORRELATION_ID);
+        BaseResponse<UserCollectionsResponse> response = collectionsService.getUserCollections(USER_ID, VERSION, CORRELATION_ID);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK.value(), response.status());

@@ -11,8 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.Base64;
 import java.util.Date;
 
-import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.COLLECTION_SERVICE;
-import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.FRAGRANCE_SERVICE;
+import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.*;
 import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.INVALID_TOKEN;
 
 @Component
@@ -35,7 +34,7 @@ public class TokenUtility {
         var keyBytes = Base64.getDecoder().decode(secretKeyString);
         var secretKey = Keys.hmacShaKeyFor(keyBytes);
 
-        long expirationMillis = 24L * 60 * 60 * 1000; // 24 hours
+        long expirationMillis = 5L * 60 * 1000; // 5 minutes
 
         var token = Jwts.builder()
                 .claim(CLAIM_TYPE, INTERNAL)
@@ -69,6 +68,7 @@ public class TokenUtility {
         return switch(service){
             case FRAGRANCE_SERVICE  -> keyConfig.getJwtInternalFragranceSecretKey();
             case COLLECTION_SERVICE -> keyConfig.getJwtInternalCollectionSecretKey();
+            case REVIEW_SERVICE -> keyConfig.getJwtInternalReviewSecretKey();
             default -> throw new ServiceException(INVALID_TOKEN);
         };
     }

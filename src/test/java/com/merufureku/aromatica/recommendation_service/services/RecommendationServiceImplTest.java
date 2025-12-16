@@ -6,8 +6,8 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.*;
 import com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums;
 import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import com.merufureku.aromatica.recommendation_service.helper.RecommendationHelper;
-import com.merufureku.aromatica.recommendation_service.services.impl.AsyncFragranceClient;
-import com.merufureku.aromatica.recommendation_service.services.impl.AsyncVectorBuilder;
+import com.merufureku.aromatica.recommendation_service.services.async.AsyncFragranceClient;
+import com.merufureku.aromatica.recommendation_service.services.async.AsyncVectorBuilder;
 import com.merufureku.aromatica.recommendation_service.services.impl.RecommendationServiceImpl;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
@@ -54,9 +54,9 @@ class RecommendationServiceImplTest {
     void getCBFRecommendations_whenUserHasCollections_shouldReturnRecommendations() {
         // user collections
         var fragranceDetails = Collections.singletonList(
-                new CollectionsResponse.FragranceDetails(1L, "name", "brand")
+                new UserCollectionsResponse.FragranceDetails(1L, "name", "brand")
         );
-        var collectionsResponse = new CollectionsResponse(USER_ID, fragranceDetails);
+        var collectionsResponse = new UserCollectionsResponse(USER_ID, fragranceDetails);
         var collectionsBaseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", collectionsResponse);
 
         when(collectionsService.getUserCollections(eq(USER_ID), anyInt(), anyString())).thenReturn(collectionsBaseResponse);
@@ -93,12 +93,12 @@ class RecommendationServiceImplTest {
                 .thenReturn(fragranceBaseResponse);
 
         // final CBF response creation
-        List<CBFResponse.Recommendations> cbfData = Collections.singletonList(
-                new CBFResponse.Recommendations(1L, "name", "brand", "desc", 0.9f)
+        List<RecommendationResponse.Recommendations> cbfData = Collections.singletonList(
+                new RecommendationResponse.Recommendations(1L, "name", "brand", "desc", 0.9f)
         );
         when(recommendationHelper.createCbfResponse(anyMap(), anyMap())).thenReturn(cbfData);
 
-        BaseResponse<CBFResponse> response = recommendationService.getCBFRecommendations(USER_ID, LIMIT, BASE_PARAM);
+        BaseResponse<RecommendationResponse> response = recommendationService.getCBFRecommendations(USER_ID, LIMIT, BASE_PARAM);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK.value(), response.status());
@@ -108,7 +108,7 @@ class RecommendationServiceImplTest {
 
     @Test
     void getCBFRecommendations_whenUserHasNoCollections_shouldThrowServiceException() {
-        var collectionsResponse = new CollectionsResponse(USER_ID, Collections.emptyList());
+        var collectionsResponse = new UserCollectionsResponse(USER_ID, Collections.emptyList());
         var collectionsBaseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", collectionsResponse);
 
         when(collectionsService.getUserCollections(eq(USER_ID), anyInt(), anyString())).thenReturn(collectionsBaseResponse);
