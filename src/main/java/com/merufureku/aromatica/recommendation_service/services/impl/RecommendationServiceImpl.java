@@ -125,23 +125,16 @@ public class RecommendationServiceImpl implements IRecommendationService {
         // Returns Map<Long, Map<Long, Double>> where key is userId and value is map of fragranceId and interaction score
         var allUserInteractions = recommendationHelper.allUserInteraction(allCollections, allReviews);
 
-        var similarityResult = recommendationHelper.getSimilarity(targetUserInteractions, allUserInteractions);
+        var similarityResult = recommendationHelper.getSimilarityScore(userId, targetUserInteractions, allUserInteractions);
         var topCandidateUsers = similarityResult.entrySet().stream()
                 .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
 
-        var topCandidatePerfumes = recommendationHelper.getTopCandidatePerfumes(topCandidateUsers, targetUserAllPerfumes, allUserInteractions, limit);
+        var topCandidatePerfumes = recommendationHelper.getTopCandidatePerfumes(topCandidateUsers, targetUserAllPerfumes, allUserInteractions, similarityResult, limit);
         var recommendedFragrance = getRecommendedFragrance(topCandidatePerfumes.keySet(), baseParam);
 
         var response = recommendationHelper.createCfResponse(recommendedFragrance, topCandidatePerfumes);
-
-        System.out.println("allUserInteractions: " + allUserInteractions);
-        System.out.println("similarityResult: " + similarityResult);
-        System.out.println("topCandidateUsers: " + topCandidateUsers);
-        System.out.println("topCandidatePerfumes: " + topCandidatePerfumes);
-        System.out.println("recommendedFragrance: " + recommendedFragrance);
-        System.out.println("response: " + response);
 
         return new BaseResponse<>(HttpStatus.OK.value(),
                 "Get CF Recommended Perfume Success", new RecommendationResponse(response));

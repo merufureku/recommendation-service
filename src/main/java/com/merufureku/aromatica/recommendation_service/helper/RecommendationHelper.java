@@ -77,7 +77,9 @@ public class RecommendationHelper {
                 );
     }
 
-    private static float getSimilarityScore(Map<Long, Float> userCollectionVector, Map.Entry<Long, Map<Long, Float>> perfumeEntry) {
+    private float getSimilarityScore(Map<Long, Float> userCollectionVector,
+                                            Map.Entry<Long, Map<Long, Float>> perfumeEntry) {
+
         Map<Long, Float> perfumeVector = perfumeEntry.getValue();
 
         float similarityScore = 0.0f;
@@ -139,7 +141,8 @@ public class RecommendationHelper {
     }
 
 
-    public Map<Integer, Map<Long, Float>> targetUserInteraction(UserCollectionsResponse userCollectionsResponse, GetAllReviews userReviews){
+    public Map<Integer, Map<Long, Float>> targetUserInteraction(UserCollectionsResponse userCollectionsResponse,
+                                                                GetAllReviews userReviews){
 
         Map<Long, Float> interactions = new HashMap<>();
 
@@ -161,7 +164,8 @@ public class RecommendationHelper {
         return userInteractions;
     }
 
-    public Map<Integer, Map<Long, Float>> allUserInteraction(CollectionsResponse collectedFragrances, GetAllReviews userReviews) {
+    public Map<Integer, Map<Long, Float>> allUserInteraction(CollectionsResponse collectedFragrances,
+                                                             GetAllReviews userReviews) {
 
         Map<Integer, Map<Long, Float>> userInteractions = new HashMap<>();
 
@@ -187,41 +191,59 @@ public class RecommendationHelper {
         return userInteractions;
     }
 
-    public Map<Integer, Float> getSimilarity(Map<Integer, Map<Long, Float>> targetUserInteraction, Map<Integer, Map<Long, Float>> allUserInteractions) {
+    public Map<Integer, Float> getSimilarityScore(Integer targetUserId,
+                                                  Map<Integer, Map<Long, Float>> targetUserInteraction,
+                                                  Map<Integer, Map<Long, Float>> allUserInteractions) {
 
-        var similarityResult = new HashMap<Integer, Float>();
+        Map<Integer, Float> similarityResult = new HashMap<>();
 
-        // Extract target user's interaction map
-        var targetInteractions = targetUserInteraction.values().iterator().next();
+        Map<Long, Float> targetInteractions =
+                targetUserInteraction.values().iterator().next();
 
-        for (Map.Entry<Integer, Map<Long, Float>> allUsersEntry : allUserInteractions.entrySet()) {
+        // Precompute target magnitude for normalization
+        float targetMagnitude = 0.0f;
+        for (float w : targetInteractions.values()) {
+            targetMagnitude += w * w;
+        }
+        targetMagnitude = (float) Math.sqrt(targetMagnitude);
 
-            var similarUserId = allUsersEntry.getKey();
-            var similarUserInteractions = allUsersEntry.getValue();
+        for (Map.Entry<Integer, Map<Long, Float>> entry : allUserInteractions.entrySet()) {
 
-            var similarityScore = 0.0f;
+            Integer otherUserId = entry.getKey();
+            if (otherUserId.equals(targetUserId)) continue;
 
-            // Iterate ALL fragrances of the similar user
-            for (Map.Entry<Long, Float> similarEntry : similarUserInteractions.entrySet()) {
+            Map<Long, Float> otherInteractions = entry.getValue();
 
-                var fragranceId = similarEntry.getKey();
-                var similarWeight = similarEntry.getValue();
+            float overlapScore = 0.0f;
+            int overlapCount = 0;
 
-                var targetWeight = targetInteractions.get(fragranceId);
+            for (Map.Entry<Long, Float> other : otherInteractions.entrySet()) {
+                Float targetWeight = targetInteractions.get(other.getKey());
                 if (targetWeight != null) {
-                    similarityScore += Math.min(similarWeight, targetWeight);
+                    overlapScore += Math.min(targetWeight, other.getValue());
+                    overlapCount++;
                 }
             }
 
-            if (similarityScore > 0) {
-                similarityResult.put(similarUserId, similarityScore);
-            }
+            // Noise filtering
+            if (overlapCount < 2 || overlapScore <= 0) continue;
+
+            // Normalize
+            float normalizedScore = overlapScore / targetMagnitude;
+
+            similarityResult.put(otherUserId, normalizedScore);
         }
 
         return similarityResult;
     }
 
-    public Map<Long, Float> getTopCandidatePerfumes(List<Integer> topSimilarUsers, Set<Long> excludedPerfumes, Map<Integer, Map<Long, Float>> allUserInteractions, int limit){
+
+    public Map<Long, Float> getTopCandidatePerfumes(
+            List<Integer> topSimilarUsers,
+            Set<Long> excludedPerfumes,
+            Map<Integer, Map<Long, Float>> allUserInteractions,
+            Map<Integer, Float> similarityResult,
+            int limit){
 
         Map<Long, Float> perfumesScore = new HashMap<>();
 
@@ -235,7 +257,10 @@ public class RecommendationHelper {
 
                     if (excludedPerfumes.contains(perfumeId)) continue;
 
-                    perfumesScore.merge(perfumeId, score, Float::sum);
+                    Float similarity = similarityResult.get(userId);
+                    if (similarity == null || similarity <= 0f) continue;
+
+                    perfumesScore.merge(perfumeId, score * similarity, Float::sum);
                 }
             }
         }
