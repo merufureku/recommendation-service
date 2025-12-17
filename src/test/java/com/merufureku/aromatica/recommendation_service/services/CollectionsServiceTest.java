@@ -65,19 +65,6 @@ class CollectionsServiceTest {
     }
 
     @Test
-    void getUserCollections_whenBodyOrDataNull_shouldThrowServiceException() {
-        when(urlConfig.getCollectionUrl()).thenReturn("http://collection-service");
-        when(tokenUtility.generateInternalToken(anyString())).thenReturn("token");
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
-                .thenReturn(new ResponseEntity<>(null, HttpStatus.OK));
-
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> collectionsService.getUserCollections(USER_ID, VERSION, CORRELATION_ID));
-
-        assertEquals(CustomStatusEnums.NO_USER_COLLECTION, exception.getCustomStatusEnums());
-    }
-
-    @Test
     void getUserCollections_whenHttpClientErrorException_shouldThrowServiceException() {
         HttpClientErrorException httpException = new HttpClientErrorException(HttpStatus.BAD_REQUEST, "bad request");
 

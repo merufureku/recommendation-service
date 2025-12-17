@@ -1,6 +1,5 @@
 package com.merufureku.aromatica.recommendation_service.exceptions;
 
-import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -13,7 +12,6 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.HashMap;
 
 @RestControllerAdvice
@@ -55,14 +53,20 @@ public class ExceptionAdvisor extends Exception{
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
-    public ResponseEntity<Object> handleConstraintViolation(
+    public ResponseEntity<Object> handleHandlerMethodValidationException(
             HandlerMethodValidationException ex,
             HttpServletRequest request) {
+
+        String message = ex.getMessage();
+        Object[] args = ex.getDetailMessageArguments();
+        if (args != null && args.length > 0 && args[0] != null) {
+            message = args[0].toString();
+        }
 
         var errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                Arrays.stream(ex.getDetailMessageArguments()).findFirst().get().toString(),
+                message,
                 request.getRequestURI(),
                 LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
         );
@@ -84,6 +88,21 @@ public class ExceptionAdvisor extends Exception{
         );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+        var errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)

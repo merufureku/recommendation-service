@@ -3,6 +3,7 @@ package com.merufureku.aromatica.recommendation_service.helper;
 import com.merufureku.aromatica.recommendation_service.dto.responses.*;
 import com.merufureku.aromatica.recommendation_service.exceptions.ServiceException;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -11,7 +12,7 @@ import static com.merufureku.aromatica.recommendation_service.constants.Recommen
 import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_FRAGRANCE_TO_RECOMMEND;
 import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_USER_COLLECTION;
 
-@Component
+@Service
 public class RecommendationHelper {
 
     public Map<Long, Float> getCollectionVector(List<FragranceNoteListResponse.FragranceNoteList> fragranceNoteLists) {
