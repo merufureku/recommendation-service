@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -29,7 +30,7 @@ import static com.merufureku.aromatica.recommendation_service.constants.Recommen
 import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.NO_FRAGRANCE_TO_RECOMMEND;
 
 @Service
-public class RecommendationServiceImpl implements IRecommendationService {
+public class RecommendationServiceImpl1 implements IRecommendationService {
 
     private final Logger logger = LogManager.getLogger(this.getClass());
 
@@ -41,7 +42,8 @@ public class RecommendationServiceImpl implements IRecommendationService {
     private final AsyncCollectionClient asyncCollectionClient;
     private final AsyncVectorBuilder asyncVectorBuilder;
 
-    public RecommendationServiceImpl(ICollectionService collectionsService, IFragranceService fragranceService, RecommendationHelper recommendationHelper, AsyncFragranceClient asyncFragranceClient, AsyncReviewsClient asyncReviewsClient, AsyncCollectionClient asyncCollectionClient, AsyncVectorBuilder asyncVectorBuilder) {
+
+    public RecommendationServiceImpl1(ICollectionService collectionsService, IFragranceService fragranceService, RecommendationHelper recommendationHelper, AsyncFragranceClient asyncFragranceClient, AsyncReviewsClient asyncReviewsClient, AsyncCollectionClient asyncCollectionClient, AsyncVectorBuilder asyncVectorBuilder) {
         this.collectionsService = collectionsService;
         this.fragranceService = fragranceService;
         this.recommendationHelper = recommendationHelper;
@@ -77,8 +79,8 @@ public class RecommendationServiceImpl implements IRecommendationService {
 
         completeFuture(userFragranceVectorsFuture, allFragranceVectorsFuture);
 
-        var userFragranceVector = userFragranceVectorsFuture.getNow(null);
-        var allFragranceVector = allFragranceVectorsFuture.getNow(null);
+        var userFragranceVector = userFragranceVectorsFuture.getNow(new HashMap<>());
+        var allFragranceVector = allFragranceVectorsFuture.getNow(new HashMap<>());
 
         var cbfResult = recommendationHelper.calculateCBFRecommendations(userFragranceVector, allFragranceVector, limit);
 
@@ -100,29 +102,24 @@ public class RecommendationServiceImpl implements IRecommendationService {
         var userCollectionsFuture = asyncCollectionClient.getUserCollection(userId, 1, baseParam.correlationId());
         completeFuture(userReviewsFuture, userCollectionsFuture);
 
-        var userReviews = userReviewsFuture.getNow(null);
-        var userCollections = userCollectionsFuture.getNow(null);
+        var userReviews = userReviewsFuture.getNow(new GetAllReviews(new ArrayList<>()));
+        var userCollections = userCollectionsFuture.getNow(new UserCollectionsResponse(userId, new ArrayList<>()));
 
-        // Returns Map<Long, Map<Long, Double>> where key is userId and value is map of fragranceId and interaction score
         var targetUserInteractions = recommendationHelper.targetUserInteraction(userCollections, userReviews);
         var targetUserAllPerfumes = targetUserInteractions.values().iterator().next().keySet();
 
-        // Get all reviews with minimum rating (4) and get only the fragrances collected and reviewed by target users
-        // Exclude fragrances already collected by the target user
         var allUserReviewsFuture = asyncReviewsClient.getReviews(
                 userId, new GetFragranceBatchParam(targetUserAllPerfumes),
                 MINIMUM_RATING, 1, baseParam.correlationId());
 
-        // Get all collections with the fragrances interacted by the target user
         var allUsersCollectionFuture = asyncCollectionClient.getAllCollectionsFromSimilarFragrance(
                 userId, new GetFragranceBatchParam(targetUserAllPerfumes),
                 1, baseParam.correlationId());
         completeFuture(allUserReviewsFuture, allUsersCollectionFuture);
 
-        var allReviews = allUserReviewsFuture.getNow(null);
-        var allCollections = allUsersCollectionFuture.getNow(null);
+        var allReviews = allUserReviewsFuture.getNow(new GetAllReviews(new ArrayList<>()));
+        var allCollections = allUsersCollectionFuture.getNow(new CollectionsResponse(new ArrayList<>()));
 
-        // Returns Map<Long, Map<Long, Double>> where key is userId and value is map of fragranceId and interaction score
         var allUserInteractions = recommendationHelper.allUserInteraction(allCollections, allReviews);
 
         var similarityResult = recommendationHelper.getSimilarityScore(userId, targetUserInteractions, allUserInteractions);

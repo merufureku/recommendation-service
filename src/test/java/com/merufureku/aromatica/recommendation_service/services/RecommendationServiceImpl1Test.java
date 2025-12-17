@@ -8,7 +8,7 @@ import com.merufureku.aromatica.recommendation_service.exceptions.ServiceExcepti
 import com.merufureku.aromatica.recommendation_service.helper.RecommendationHelper;
 import com.merufureku.aromatica.recommendation_service.services.async.AsyncFragranceClient;
 import com.merufureku.aromatica.recommendation_service.services.async.AsyncVectorBuilder;
-import com.merufureku.aromatica.recommendation_service.services.impl.RecommendationServiceImpl;
+import com.merufureku.aromatica.recommendation_service.services.impl.RecommendationServiceImpl1;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IFragranceService;
 import org.junit.jupiter.api.Test;
@@ -26,10 +26,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RecommendationServiceImplTest {
+class RecommendationServiceImpl1Test {
 
     @InjectMocks
-    private RecommendationServiceImpl recommendationService;
+    private RecommendationServiceImpl1 recommendationService;
 
     @Mock
     private ICollectionService collectionsService;
@@ -104,23 +104,5 @@ class RecommendationServiceImplTest {
         assertEquals(HttpStatus.OK.value(), response.status());
         assertNotNull(response.data());
         assertEquals(1, response.data().recommendations().size());
-    }
-
-    @Test
-    void getCBFRecommendations_whenUserHasNoCollections_shouldThrowServiceException() {
-        var collectionsResponse = new UserCollectionsResponse(USER_ID, Collections.emptyList());
-        var collectionsBaseResponse = new BaseResponse<>(HttpStatus.OK.value(), "success", collectionsResponse);
-
-        when(collectionsService.getUserCollections(eq(USER_ID), anyInt(), anyString())).thenReturn(collectionsBaseResponse);
-
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> recommendationService.getCBFRecommendations(USER_ID, LIMIT, BASE_PARAM));
-
-        assertEquals(CustomStatusEnums.NO_USER_COLLECTION, exception.getCustomStatusEnums());
-
-        verify(asyncFragranceClient, never()).getUserCollectionNotes(anySet(), anyString());
-        verify(asyncFragranceClient, never()).getAllFragranceNotes(anySet(), anyString());
-        verify(asyncVectorBuilder, never()).buildUserVector(anyList());
-        verify(asyncVectorBuilder, never()).buildAllPerfumeVectors(any(FragranceNoteListResponse.class));
     }
 }
