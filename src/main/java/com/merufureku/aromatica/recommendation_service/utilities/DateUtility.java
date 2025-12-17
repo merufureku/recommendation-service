@@ -4,14 +4,16 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
+import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.ACCESS_TOKEN_EXPIRATION_MINUTES;
+
 @Component
 public class DateUtility {
 
-    public static boolean isDateExpired(LocalDateTime dateTime) {
-        // Get the current date-time minus 5 minutes
-        var nowMinus5Min = LocalDateTime.now().minusMinutes(5);
+    public static boolean isAccessTokenExpired(LocalDateTime expirationTime) {
+        var now = LocalDateTime.now();
 
-        // Check if the given date-time is before nowMinus5Min
-        return dateTime.isBefore(nowMinus5Min);
+        expirationTime.minusMinutes(ACCESS_TOKEN_EXPIRATION_MINUTES);
+
+        return now.isAfter(expirationTime);
     }
 }
