@@ -89,7 +89,7 @@ public class CollectionsService implements ICollectionService {
                     url.toString(), HttpMethod.POST, new HttpEntity<>(param, getHeaders()), new ParameterizedTypeReference<>() {}
             );
 
-            logger.info("Successfully fetched User Collections for fragrance IDs: {}", param.fragranceIds());
+            logger.info("Successfully fetched all users collections for fragrance IDs: {}", param.fragranceIds());
 
             return responseEntity.getBody();
         }
@@ -97,7 +97,7 @@ public class CollectionsService implements ICollectionService {
             throw restExceptionHelper.handleException(ex);
         }
         catch (Exception e){
-            logger.error("Unexpected error fetching User Collections: {}", e.getMessage());
+            logger.error("Unexpected error fetching all collections: {}", e.getMessage());
             throw e;
         }
     }
