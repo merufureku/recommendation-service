@@ -16,6 +16,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.FRAGRANCE_SERVICE;
@@ -63,6 +64,13 @@ public class FragranceService implements IFragranceService {
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
         }
+        catch (HttpServerErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (Exception e){
+            logger.error("Unexpected error occurred while fetching perfumes: {}", e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -93,6 +101,13 @@ public class FragranceService implements IFragranceService {
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
         }
+        catch (HttpServerErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (Exception e){
+            logger.error("Unexpected error occurred while fetching perfume notes: {}", e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -122,6 +137,13 @@ public class FragranceService implements IFragranceService {
         }
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
+        }
+        catch (HttpServerErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (Exception e){
+            logger.error("Unexpected error occurred while fetching all perfume notes: {}", e.getMessage());
+            throw e;
         }
     }
 

@@ -8,12 +8,14 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.UserCollect
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.ICollectionService;
 import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.COLLECTION_SERVICE;
@@ -36,6 +38,7 @@ public class CollectionsService implements ICollectionService {
     }
 
     @Override
+    @CircuitBreaker(name = "collectionServiceCircuitBreaker")
     public BaseResponse<UserCollectionsResponse> getUserCollections(Integer userId, int version, String correlationId) {
 
         try{
@@ -60,6 +63,9 @@ public class CollectionsService implements ICollectionService {
             return responseEntity.getBody();
         }
         catch (HttpClientErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (HttpServerErrorException ex){
             throw restExceptionHelper.handleException(ex);
         }
         catch (Exception e){
@@ -96,8 +102,11 @@ public class CollectionsService implements ICollectionService {
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
         }
+        catch (HttpServerErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
         catch (Exception e){
-            logger.error("Unexpected error fetching all collections: {}", e.getMessage());
+            logger.error("Unexpected error fetching all users collections: {}", e.getMessage());
             throw e;
         }
     }

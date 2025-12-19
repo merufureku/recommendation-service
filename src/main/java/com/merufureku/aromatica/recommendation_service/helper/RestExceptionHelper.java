@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 
 import static com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums.*;
 
@@ -26,6 +27,18 @@ public class RestExceptionHelper {
         }
         else {
             throw new ServiceException(INVALID_REQUEST);
+        }
+    }
+
+    public HttpServerErrorException handleException(HttpServerErrorException ex) {
+
+        logger.error("HTTP Server Error: {}", ex.getMessage());
+
+         if (ex.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE){
+            throw new ServiceException(SERVICE_UNAVAILABLE);
+        }
+        else {
+            throw new ServiceException(INTERNAL_SERVER_ERROR);
         }
     }
 

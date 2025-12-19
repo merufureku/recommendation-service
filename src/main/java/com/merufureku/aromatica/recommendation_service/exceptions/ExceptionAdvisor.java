@@ -1,5 +1,6 @@
 package com.merufureku.aromatica.recommendation_service.exceptions;
 
+import com.merufureku.aromatica.recommendation_service.enums.CustomStatusEnums;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -7,9 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -103,6 +106,22 @@ public class ExceptionAdvisor extends Exception{
         );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({SocketTimeoutException.class, ResourceAccessException.class})
+    public ResponseEntity<ErrorResponse> handleCustomException(
+            HttpServletRequest request
+    ) {
+        var errorType = CustomStatusEnums.SERVICE_UNAVAILABLE;
+        var errorResponse = new ErrorResponse(
+                errorType.getStatusCode(),
+                errorType.getHttpStatus().getReasonPhrase(),
+                errorType.getMessage(),
+                request.getRequestURI(),
+                LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
+        );
+
+        return new ResponseEntity<>(errorResponse, errorType.getHttpStatus());
     }
 
     @ExceptionHandler(Exception.class)

@@ -7,12 +7,14 @@ import com.merufureku.aromatica.recommendation_service.dto.responses.GetAllRevie
 import com.merufureku.aromatica.recommendation_service.helper.RestExceptionHelper;
 import com.merufureku.aromatica.recommendation_service.services.interfaces.IReviewService;
 import com.merufureku.aromatica.recommendation_service.utilities.TokenUtility;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import static com.merufureku.aromatica.recommendation_service.constants.RecommendationCollectionConstants.REVIEW_SERVICE;
@@ -35,6 +37,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @CircuitBreaker(name = "reviewServiceCircuitBreaker")
     public BaseResponse<GetAllReviews> getUserReviews(int userId, int minRating, int version, String correlationId) {
 
         try{
@@ -62,6 +65,13 @@ public class ReviewService implements IReviewService {
         }
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
+        }
+        catch (HttpServerErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (Exception e){
+            logger.error("An unexpected error occurred while fetching user reviews: {}", e.getMessage());
+            throw e;
         }
     }
 
@@ -94,6 +104,13 @@ public class ReviewService implements IReviewService {
         }
         catch (HttpClientErrorException ex){
             throw restExceptionHelper.handleException(ex);
+        }
+        catch (HttpServerErrorException ex){
+            throw restExceptionHelper.handleException(ex);
+        }
+        catch (Exception e){
+            logger.error("An unexpected error occurred while fetching reviews: {}", e.getMessage());
+            throw e;
         }
     }
 
