@@ -4,7 +4,6 @@ import com.merufureku.aromatica.recommendation_service.dto.params.BaseParam;
 import com.merufureku.aromatica.recommendation_service.dto.responses.BaseResponse;
 import com.merufureku.aromatica.recommendation_service.dto.responses.RecommendationResponse;
 import com.merufureku.aromatica.recommendation_service.services.factory.RecommendationServiceFactory;
-import com.merufureku.aromatica.recommendation_service.services.interfaces.IRecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
