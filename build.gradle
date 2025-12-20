@@ -29,6 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'com.bucket4j:bucket4j-core:8.7.0'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.3.0'
